@@ -35,7 +35,7 @@ type NLPResponse struct {
 var dp DialogflowProcessor
 
 func main() {
-	dp.init("tutorialchatbot-d4db0", "tutorialchatbot-d4db0-0fea9ca7f682.json", "en", "America/Montevideo")
+	dp.init("102213609642742824280", "bot-hackathon21-key.json", "en", "America/Montevideo")
 	http.HandleFunc("/", requestHandler)
 	fmt.Println("Started listening...")
 	http.ListenAndServe(":5000", nil)
