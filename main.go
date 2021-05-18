@@ -28,9 +28,47 @@ type DialogflowProcessor struct {
 // NLPResponse is the struct for the response
 type NLPResponse struct {
 	Intent     string            `json:"intent"`
+	Text       string            `json:"text"`
 	Confidence float32           `json:"confidence"`
 	Entities   map[string]string `json:"entities"`
 }
+
+// Example response object
+/*
+2021/05/18 14:23:29 
+query_text:"Coffee"  
+language_code:"en"  
+action:"input.unknown"  
+parameters:{}  
+all_required_params_present:true  
+fulfillment_text:"Default: I didn't get that. Can you say it again?"  
+fulfillment_messages:{text:{text:"Default: I didn't get that. Can you say it again?"}}  
+output_contexts:{
+	name:"projects/buoyant-cargo-314008/agent/sessions/testUser/contexts/__system_counters__"  
+	lifespan_count:1  
+	parameters:{
+		fields:{
+			key:"no-input"  
+			value:{number_value:0}
+		}  
+		fields:{
+			key:"no-match"  
+			value:{number_value:1}
+		}
+	}
+}  
+intent:{
+	name:"projects/buoyant-cargo-314008/agent/intents/1f3b775b-81a1-4cee-832a-58dac8f75b90"  
+	display_name:"Default Fallback Intent"  
+	is_fallback:true
+}  
+intent_detection_confidence:1
+main.NLPResponse{
+	Intent:"Default Fallback Intent", 
+	Confidence:1, 
+	Entities:map[string]string{}
+}
+*/
 
 var dp DialogflowProcessor
 
@@ -108,6 +146,7 @@ func (dp *DialogflowProcessor) processNLP(rawMessage string, username string) (r
 	}
 	queryResult := response.GetQueryResult()
 	if queryResult.Intent != nil {
+		r.Text = queryResult.FulfillmentText
 		r.Intent = queryResult.Intent.DisplayName
 		r.Confidence = float32(queryResult.IntentDetectionConfidence)
 	}
