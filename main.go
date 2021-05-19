@@ -201,6 +201,7 @@ func (dp *DialogflowProcessor) processNLP(rawMessage string, username string) (r
 
 func extractDialogflowEntities(p *structpb.Value) (extractedEntity string) {
 	kind := p.GetKind()
+	fmt.Println(kind)
 	switch kind.(type) {
 	case *structpb.Value_StringValue:
 		return p.GetStringValue()
@@ -227,10 +228,9 @@ func extractDialogflowEntities(p *structpb.Value) (extractedEntity string) {
 		return extractedEntity
 	case *structpb.Value_ListValue:
 		list := p.GetListValue()
-		if len(list.GetValues()) > 1 {
-			// @TODO: Extract more values
+		for _, val := range list.GetValues() {
+			extractedEntity = extractDialogflowEntities(val)
 		}
-		extractedEntity = extractDialogflowEntities(list.GetValues()[0])
 		return extractedEntity
 	default:
 		return ""
