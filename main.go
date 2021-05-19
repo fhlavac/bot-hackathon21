@@ -1,16 +1,21 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
+	"sync"
 
 	dialogflow "cloud.google.com/go/dialogflow/apiv2"
-	"github.com/golang/protobuf/ptypes/struct"
+	structpb "github.com/golang/protobuf/ptypes/struct"
 	"google.golang.org/api/option"
 	dialogflowpb "google.golang.org/genproto/googleapis/cloud/dialogflow/v2"
 )
@@ -35,37 +40,37 @@ type NLPResponse struct {
 
 // Example response object
 /*
-2021/05/18 14:23:29 
-query_text:"Coffee"  
-language_code:"en"  
-action:"input.unknown"  
-parameters:{}  
-all_required_params_present:true  
-fulfillment_text:"Default: I didn't get that. Can you say it again?"  
-fulfillment_messages:{text:{text:"Default: I didn't get that. Can you say it again?"}}  
+2021/05/18 14:23:29
+query_text:"Coffee"
+language_code:"en"
+action:"input.unknown"
+parameters:{}
+all_required_params_present:true
+fulfillment_text:"Default: I didn't get that. Can you say it again?"
+fulfillment_messages:{text:{text:"Default: I didn't get that. Can you say it again?"}}
 output_contexts:{
-	name:"projects/buoyant-cargo-314008/agent/sessions/testUser/contexts/__system_counters__"  
-	lifespan_count:1  
+	name:"projects/buoyant-cargo-314008/agent/sessions/testUser/contexts/__system_counters__"
+	lifespan_count:1
 	parameters:{
 		fields:{
-			key:"no-input"  
+			key:"no-input"
 			value:{number_value:0}
-		}  
+		}
 		fields:{
-			key:"no-match"  
+			key:"no-match"
 			value:{number_value:1}
 		}
 	}
-}  
+}
 intent:{
-	name:"projects/buoyant-cargo-314008/agent/intents/1f3b775b-81a1-4cee-832a-58dac8f75b90"  
-	display_name:"Default Fallback Intent"  
+	name:"projects/buoyant-cargo-314008/agent/intents/1f3b775b-81a1-4cee-832a-58dac8f75b90"
+	display_name:"Default Fallback Intent"
 	is_fallback:true
-}  
+}
 intent_detection_confidence:1
 main.NLPResponse{
-	Intent:"Default Fallback Intent", 
-	Confidence:1, 
+	Intent:"Default Fallback Intent",
+	Confidence:1,
 	Entities:map[string]string{}
 }
 */
@@ -73,10 +78,42 @@ main.NLPResponse{
 var dp DialogflowProcessor
 
 func main() {
-	dp.init("buoyant-cargo-314008", "bot-hackathon21-key.json", "en", "America/Montevideo")
+	dp.init("buoyant-cargo-314008", "bot-hackaton21-key.json", "en", "America/Montevideo")
 	http.HandleFunc("/", requestHandler)
 	fmt.Println("Started listening...")
-	http.ListenAndServe(":5000", nil)
+	go http.ListenAndServe(":5000", nil)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		fmt.Println("START")
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Println("Simple Shell")
+		fmt.Println("---------------------")
+		defer wg.Done()
+
+		for {
+			fmt.Print("-> ")
+			text, _ := reader.ReadString('\n')
+			// convert CRLF to LF
+			text = strings.Replace(text, "\n", "", -1)
+			values := map[string]string{"Message": text}
+			json_data, err := json.Marshal(values)
+
+			if err != nil {
+				log.Fatal(err)
+			}
+			http.Post("http://localhost:5000", "application/json", bytes.NewBuffer(json_data))
+
+			if strings.Compare("hi", text) == 0 {
+				fmt.Println("hello, Yourself")
+			}
+			if strings.Compare("exit", text) == 0 {
+				fmt.Println("Exiting")
+				wg.Done()
+			}
+		}
+	}()
+	wg.Wait()
 }
 
 func requestHandler(w http.ResponseWriter, r *http.Request) {
@@ -98,7 +135,7 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Use NLP
 		response := dp.processNLP(m.Message, "testUser")
-		fmt.Printf("%#v", response)
+		fmt.Printf("%#v\n", response.Text)
 		w.Header().Set("Content-Type", "application/json")
 		//json.NewEncoder(w).Encode(response)
 		json.NewEncoder(w).Encode(response)
@@ -154,7 +191,7 @@ func (dp *DialogflowProcessor) processNLP(rawMessage string, username string) (r
 	params := queryResult.Parameters.GetFields()
 	if len(params) > 0 {
 		for paramName, p := range params {
-			fmt.Printf("Param %s: %s (%s)", paramName, p.GetStringValue(), p.String())
+			fmt.Printf("Param %s: %s (%s)\n", paramName, p.GetStringValue(), p.String())
 			extractedValue := extractDialogflowEntities(p)
 			r.Entities[paramName] = extractedValue
 		}
@@ -177,13 +214,13 @@ func extractDialogflowEntities(p *structpb.Value) (extractedEntity string) {
 		extractedEntity = ""
 		for key, value := range fields {
 			if key == "amount" {
-				extractedEntity = fmt.Sprintf("%s%s", extractedEntity, strconv.FormatFloat(value.GetNumberValue(), 'f', 6, 64))
+				extractedEntity = fmt.Sprintf("%s%s\n", extractedEntity, strconv.FormatFloat(value.GetNumberValue(), 'f', 6, 64))
 			}
 			if key == "unit" {
-				extractedEntity = fmt.Sprintf("%s%s", extractedEntity, value.GetStringValue())
+				extractedEntity = fmt.Sprintf("%s%s\n", extractedEntity, value.GetStringValue())
 			}
 			if key == "date_time" {
-				extractedEntity = fmt.Sprintf("%s%s", extractedEntity, value.GetStringValue())
+				extractedEntity = fmt.Sprintf("%s%s\n", extractedEntity, value.GetStringValue())
 			}
 			// @TODO: Other entity types can be added here
 		}
