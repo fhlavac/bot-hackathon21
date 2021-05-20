@@ -80,14 +80,12 @@ var dp DialogflowProcessor
 func main() {
 	dp.init("buoyant-cargo-314008", "bot-hackaton21-key.json", "en", "America/Montevideo")
 	http.HandleFunc("/", requestHandler)
-	fmt.Println("Started listening...")
 	go http.ListenAndServe(":5000", nil)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		fmt.Println("START")
 		reader := bufio.NewReader(os.Stdin)
-		fmt.Println("Simple Shell")
+		fmt.Println("Coffee bot")
 		fmt.Println("---------------------")
 		defer wg.Done()
 
@@ -104,9 +102,6 @@ func main() {
 			}
 			http.Post("http://localhost:5000", "application/json", bytes.NewBuffer(json_data))
 
-			if strings.Compare("hi", text) == 0 {
-				fmt.Println("hello, Yourself")
-			}
 			if strings.Compare("exit", text) == 0 {
 				fmt.Println("Exiting")
 				wg.Done()
@@ -191,7 +186,7 @@ func (dp *DialogflowProcessor) processNLP(rawMessage string, username string) (r
 	params := queryResult.Parameters.GetFields()
 	if len(params) > 0 {
 		for paramName, p := range params {
-			fmt.Printf("Param %s: %s (%s)\n", paramName, p.GetStringValue(), p.String())
+			// fmt.Printf("Param %s: %s (%s)\n", paramName, p.GetStringValue(), p.String())
 			extractedValue := extractDialogflowEntities(p)
 			r.Entities[paramName] = extractedValue
 		}
@@ -201,7 +196,6 @@ func (dp *DialogflowProcessor) processNLP(rawMessage string, username string) (r
 
 func extractDialogflowEntities(p *structpb.Value) (extractedEntity string) {
 	kind := p.GetKind()
-	fmt.Println(kind)
 	switch kind.(type) {
 	case *structpb.Value_StringValue:
 		return p.GetStringValue()
