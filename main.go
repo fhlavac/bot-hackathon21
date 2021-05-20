@@ -130,7 +130,7 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Use NLP
 		response := dp.processNLP(m.Message, "testUser")
-		fmt.Printf("%#v\n", response.Text)
+		fmt.Printf("<- %s\n", response.Text)
 		w.Header().Set("Content-Type", "application/json")
 		//json.NewEncoder(w).Encode(response)
 		json.NewEncoder(w).Encode(response)
@@ -186,7 +186,6 @@ func (dp *DialogflowProcessor) processNLP(rawMessage string, username string) (r
 	params := queryResult.Parameters.GetFields()
 	if len(params) > 0 {
 		for paramName, p := range params {
-			// fmt.Printf("Param %s: %s (%s)\n", paramName, p.GetStringValue(), p.String())
 			extractedValue := extractDialogflowEntities(p)
 			r.Entities[paramName] = extractedValue
 		}
